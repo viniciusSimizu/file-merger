@@ -3,6 +3,7 @@
 
 #define ROOT_EXEC "main.c"
 
-char *helper_project_dir(const char *dirname);
+void helper_goto_parent(char *path);
+char *helper_project_dir(const char *dirpath);
 
 #endif

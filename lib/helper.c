@@ -2,24 +2,39 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <errno.h>
+
 #include "helper.h"
 
-char *helper_find_root_file(char *dirname);
-void helper_goto_parent(char *haystack);
+char *helper_find_root_file(char *dirpath);
 
-char *helper_project_dir(const char *dirname) {
-	if (*dirname != '/') {
-		perror("dirname must be an absolute path");
+char *helper_project_dir(const char *dirpath) {
+	struct stat st;
+
+	if (stat(dirpath, &st) == -1) {
+		fprintf(stderr, "Couldn't read the \"%s\" path:\n%s\n", dirpath, strerror(errno));
 		return NULL;
-	};
+	}
 
-	char *dirname_cpy = malloc(sizeof(char) * (strlen(dirname) + 1));
-	strcpy(dirname_cpy, dirname);
-	return helper_find_root_file(dirname_cpy);
+	if (S_ISDIR(st.st_mode) == 0) {
+		fprintf(stderr, "The dirpath \"%s\" is not a directory", dirpath);
+		return NULL;
+	}
+
+	char *dirpath_dup = strdup(dirpath);
+	char *project_root = helper_find_root_file(dirpath_dup);
+
+	if (project_root == NULL) {
+		free(dirpath_dup);
+		return NULL;
+	}
+
+	return project_root;
 };
 
-char *helper_find_root_file(char *dirname) {
-	DIR *dir = opendir(dirname);
+char *helper_find_root_file(char *dirpath) {
+	DIR *dir = opendir(dirpath);
 	if (dir == NULL) {
 		return NULL;
 	}
@@ -32,23 +47,23 @@ char *helper_find_root_file(char *dirname) {
 
 		if (strcmp(entry->d_name, ROOT_EXEC) == 0) {
 			closedir(dir);
-			return dirname;
+			return dirpath;
 		};
-	};
+	}
 
 	closedir(dir);
-	helper_goto_parent(dirname);
+	helper_goto_parent(dirpath);
 
-	if (strlen(dirname) == 0) {
+	if (strlen(dirpath) == 0) {
 		return NULL;
-	};
+	}
 
-	return helper_find_root_file(dirname);
+	return helper_find_root_file(dirpath);
 };
 
-void helper_goto_parent(char *haystack) {
-	char *needle = strrchr(haystack, '/');
+void helper_goto_parent(char *path) {
+	char *needle = strrchr(path, '/');
 	if (needle != NULL) {
 		*needle = '\0';
-	};
+	}
 };
